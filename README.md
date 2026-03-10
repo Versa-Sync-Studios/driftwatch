@@ -1,57 +1,102 @@
-# Driftwatch
+# Driftwatch — Supabase Schema Diff Tool
 
-**Visual schema diff tool for Supabase Dev vs Prod**
+> Catch schema drift between your Supabase Dev and Prod environments instantly. Free, browser-based, no setup required.
 
-Catch schema drift between your Supabase environments before it causes production issues. Free, browser-based, no setup required.
+🔗 **[driftwatch.online](https://driftwatch.online)**
 
-## What it compares
+---
 
-- Tables (RLS enabled/forced)
-- Columns (type, nullable, default)
-- RLS Policies (cmd, roles, qual, with_check)
-- Triggers (events, timing)
-- Functions (full definition diff)
-- Indexes
-- Enums
-- Foreign Keys
-- Check Constraints
-- Sequences
-- Extensions
-- Storage Buckets
-- Bucket RLS Policies
+## What is it?
 
-## How to use
+Driftwatch is a free browser-based tool that compares two Supabase project schemas side by side. Paste your JSON snapshots, hit Run Diff, and instantly see exactly what's different — no Docker, no CLI, no install.
 
-1. Run the snapshot SQL query in your Dev project SQL editor
-2. Export results as JSON
-3. Run the same query in Prod, export as JSON
-4. Paste both into Driftwatch and click Run Diff
-5. Download the markdown report
+All processing happens in your browser. No data is ever sent to a server.
 
-> **Important:** Set row limit to "No limit" in the Supabase SQL editor before running, or results will be truncated.
+---
 
-## Running locally
+## What it covers
+
+14 schema sections in a single diff:
+
+| Section | What it checks |
+|---|---|
+| Tables | RLS enabled, force RLS |
+| Columns | Types, nullability, defaults |
+| RLS Policies | Rules, roles, qual expressions |
+| Triggers | Events, timing, statements |
+| Functions | Full definitions, line-by-line diff |
+| Indexes | Custom indexes, uniqueness |
+| Enums | Types and values |
+| Foreign Keys | Relationships, cascade rules |
+| Check Constraints | Validation rules |
+| Sequences | Auto-increment config |
+| Extensions | Installed Postgres extensions |
+| Buckets | Storage config, MIME types |
+| Bucket RLS | Storage access policies |
+| Realtime | Publication tables |
+
+---
+
+## How to use it
+
+**Step 1** — Go to [driftwatch.online](https://driftwatch.online) and select which sections to compare
+
+**Step 2** — Copy the generated SQL snapshot query
+
+**Step 3** — Open Supabase SQL Editor in your Dev project → set row limit to **No limit** → run the query → export results as JSON
+
+**Step 4** — Repeat in your Prod project
+
+**Step 5** — Paste both JSON outputs into Driftwatch → hit **Run Diff**
+
+Results appear instantly with per-section cards, status tabs, and a downloadable Markdown report.
+
+---
+
+## Features
+
+- **14 schema sections** — the most comprehensive browser-based Supabase diff tool
+- **Smart function diff** — strips comment noise, shows clean line-by-line unified diff
+- **RLS audit** — surface policy mismatches before they become production incidents
+- **Realtime coverage** — diff which tables have live subscriptions in each environment
+- **Markdown report** — one-click download to share with your team or attach to PRs
+- **Light / dark mode** — full theme support
+- **100% in-browser** — no server, no accounts, no data collection
+- **Free forever**
+
+---
+
+## Run locally
 
 ```bash
+git clone https://github.com/Versa-Sync-Studios/driftwatch.git
+cd driftwatch
 npm install
 npm run dev
 ```
 
-## Deploying to Vercel
+Requires Node.js 18+
 
-```bash
-npm run build
-# Push to GitHub and connect repo to Vercel
-# Or: npx vercel --prod
-```
+---
 
-## Stack
+## Tech stack
 
-- React 18
-- Vite 5
-- Zero backend — all diff logic runs in the browser
-- No data is ever sent to any server
+- React 18 + Vite 5
+- No UI library — pure CSS variables + inline styles
+- Deployed on Vercel
+
+---
+
+## Contributing
+
+Issues and PRs are welcome. If you find a bug or want to suggest a new schema section, open an issue.
+
+---
 
 ## License
 
 MIT
+
+---
+
+Built with ❤️ by [Versa Sync Studios](https://github.com/Versa-Sync-Studios)
