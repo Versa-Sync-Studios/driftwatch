@@ -1,0 +1,38 @@
+# Driftwatch
+
+> A free, browser-based schema diff tool for Supabase developers. Compare Dev and Prod environments instantly — no install, no server, no data sent anywhere.
+
+## What it does
+
+Driftwatch lets you compare two Supabase projects side by side across 14 schema sections:
+- Tables, Columns, RLS Policies, Triggers, Functions, Indexes, Enums
+- Foreign Keys, Check Constraints, Sequences, Extensions
+- Storage Buckets, Bucket RLS, Realtime Publications
+
+## How it works
+
+1. Select which schema sections to compare
+2. Copy the generated SQL snapshot query
+3. Run it in both Supabase projects, export results as JSON
+4. Paste both JSON outputs into Driftwatch and hit Run Diff
+5. Results appear instantly in the browser with a downloadable Markdown report
+
+## Key facts
+
+- 100% in-browser — no data is ever sent to a server
+- Free forever
+- No sign-up or install required
+- Takes ~30 seconds to run a full diff
+- Open source: https://github.com/Versa-Sync-Studios/driftwatch
+
+## Use cases
+
+- Catching schema drift before deploying to production
+- Auditing RLS policy mismatches between environments
+- Verifying migration completeness
+- Checking which tables have Realtime enabled in each environment
+- Identifying missing indexes in production
+
+## URL
+
+https://driftwatch.online
