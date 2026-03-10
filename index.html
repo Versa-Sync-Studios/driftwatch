@@ -7,7 +7,7 @@
     <!-- Primary Meta -->
     <title>Driftwatch — Supabase Schema Diff Tool</title>
     <meta name="description" content="Instantly compare tables, columns, RLS policies, triggers, functions, indexes, enums and more between two Supabase projects. Free, browser-based, no setup required." />
-    <meta name="keywords" content="supabase, schema diff, postgres diff, dev prod comparison, database migration, RLS, supabase tools" />
+    <meta name="keywords" content="supabase, schema diff, postgres diff, dev prod comparison, database migration, RLS, supabase tools, schema drift, realtime" />
     <meta name="author" content="Driftwatch" />
     <meta name="robots" content="index, follow" />
 
@@ -16,7 +16,7 @@
     <meta property="og:title" content="Driftwatch — Supabase Schema Diff Tool" />
     <meta property="og:description" content="Catch schema drift between your Supabase Dev and Prod environments instantly. Free, browser-based, paste and go." />
     <meta property="og:image" content="/og-image.png" />
-    <meta property="og:url" content="https://driftwatch.dev" />
+    <meta property="og:url" content="https://driftwatch.online" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -24,13 +24,48 @@
     <meta name="twitter:description" content="Catch schema drift between your Supabase Dev and Prod environments instantly. Free tool." />
     <meta name="twitter:image" content="/og-image.png" />
 
+    <!-- Canonical -->
+    <link rel="canonical" href="https://driftwatch.online" />
+
+    <!-- Schema Markup -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Driftwatch",
+      "url": "https://driftwatch.online",
+      "description": "Compare Supabase Dev and Prod schema drift instantly in your browser. Diff tables, columns, RLS policies, triggers, functions, indexes, enums, Realtime and more.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "browserRequirements": "Requires JavaScript",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "creator": {
+        "@type": "Organization",
+        "name": "Versa Sync Studios"
+      }
+    }
+    </script>
+
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/logo.png" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- Google Analytics — replace G-XXXXXXXXXX with your actual Measurement ID -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
   </head>
   <body>
     <div id="root"></div>

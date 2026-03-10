@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { SQL_SECTIONS, ALL_SECTIONS, buildSQL } from "./sql.js";
 import { SECTION_ORDER, SECTION_META, runDiff, generateMarkdown, computeLineDiff } from "./diff.js";
 
@@ -9,17 +9,14 @@ function useTheme() {
   return [theme, () => setTheme(t => t === "dark" ? "light" : "dark")];
 }
 
-// ─── Small helpers ────────────────────────────────────────────────────────────
-function Btn({ children, onClick, variant = "ghost", disabled, style = {} }) {
-  const base = { padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: "none", transition: "all 0.15s", ...style };
-  const variants = {
-    primary: { background: "var(--amber)", color: "#000", fontWeight: 700 },
-    ghost:   { background: "var(--bg3)", color: "var(--text2)", border: "1px solid var(--border)" },
-    danger:  { background: "var(--red-bg)", color: "var(--red)", border: "1px solid var(--red-b)" },
-  };
-  return <button onClick={onClick} disabled={disabled} style={{ ...base, ...variants[variant], opacity: disabled ? 0.4 : 1, cursor: disabled ? "not-allowed" : "pointer" }}>{children}</button>;
+// ─── Analytics helper ─────────────────────────────────────────────────────────
+function trackEvent(name, params = {}) {
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("event", name, params);
+  }
 }
 
+// ─── Small helpers ────────────────────────────────────────────────────────────
 function Badge({ children, color = "var(--text3)", bg = "var(--bg3)" }) {
   return <span style={{ background: bg, color, fontSize: 10, padding: "2px 8px", borderRadius: 20, fontWeight: 600, letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{children}</span>;
 }
@@ -32,10 +29,6 @@ function CopyBtn({ text }) {
       {copied ? "✓ Copied" : "Copy SQL"}
     </button>
   );
-}
-
-function Spinner() {
-  return <span className="spin" style={{ display: "inline-block", width: 16, height: 16, border: "2px solid var(--border)", borderTopColor: "var(--amber)", borderRadius: "50%" }} />;
 }
 
 // ─── Skeleton loader ──────────────────────────────────────────────────────────
@@ -70,14 +63,15 @@ function Nav({ theme, toggleTheme, onHome }) {
   return (
     <nav style={{ borderBottom: "1px solid var(--border)", padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, background: "var(--bg)", zIndex: 100, backdropFilter: "blur(8px)" }}>
       <div onClick={onHome} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-      <img src="/logo.png" alt="Driftwatch" style={{ width: 36, height: 36, objectFit: "contain" }} />
+        <img src="/logo.png" alt="Driftwatch" style={{ width: 36, height: 36, objectFit: "contain" }} />
         <div>
           <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)", letterSpacing: "-0.01em", lineHeight: 1 }}>Driftwatch</div>
           <div style={{ fontSize: 9, color: "var(--text3)", letterSpacing: "0.12em", textTransform: "uppercase" }}>Schema Diff</div>
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <a href="https://github.com" target="_blank" rel="noopener" style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text2)", padding: "6px 12px", borderRadius: 7, fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}>
+        <a href="https://github.com/Versa-Sync-Studios/driftwatch" target="_blank" rel="noopener"
+          style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text2)", padding: "6px 12px", borderRadius: 7, fontSize: 11, display: "flex", alignItems: "center", gap: 5 }}>
           ★ GitHub
         </a>
         <button onClick={toggleTheme} style={{ background: "var(--bg3)", border: "1px solid var(--border)", color: "var(--text2)", padding: "7px 10px", borderRadius: 7, fontSize: 14 }}>
@@ -88,7 +82,7 @@ function Nav({ theme, toggleTheme, onHome }) {
   );
 }
 
-// ─── Section selector (checkboxes) ───────────────────────────────────────────
+// ─── Section selector ─────────────────────────────────────────────────────────
 function SectionSelector({ selected, onChange }) {
   const toggle = (key) => onChange(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
   const allSelected = selected.length === ALL_SECTIONS.length;
@@ -118,6 +112,169 @@ function SectionSelector({ selected, onChange }) {
   );
 }
 
+// ─── Landing sections (shown below the tool on input page) ───────────────────
+
+const FEATURES = [
+  { icon: "⬡", title: "14 Schema Sections", desc: "Tables, columns, RLS policies, triggers, functions, indexes, enums, foreign keys, check constraints, sequences, extensions, buckets, bucket RLS and Realtime publications.", color: "#f59e0b" },
+  { icon: "⟳", title: "Realtime Coverage", desc: "The only browser-based tool that also diffs your Supabase Realtime publication tables — know exactly which tables have live subscriptions in each environment.", color: "#34d399" },
+  { icon: "🔒", title: "100% In-Browser", desc: "Your schema data never leaves your machine. All diffing happens in JavaScript locally — no server, no storage, no accounts. Paste and go.", color: "#a78bfa" },
+  { icon: "ƒ", title: "Smart Function Diff", desc: "Strips comment noise before comparing function definitions. Shows a clean line-by-line unified diff so you see only real logic changes.", color: "#67e8f9" },
+  { icon: "⚿", title: "RLS Policy Audit", desc: "Surface misconfigured row-level security between environments before they become production incidents. Diff both table and storage policies.", color: "#ef4444" },
+  { icon: "↓", title: "Markdown Report", desc: "One-click download of a full diff report as a .md file — share with your team, attach to PRs, or use as a migration checklist.", color: "#fbbf24" },
+  { icon: "⌖", title: "Index Awareness", desc: "Know when performance-critical indexes exist in Dev but were never applied to Prod. Excludes primary keys to keep the signal clean.", color: "#fdba74" },
+  { icon: "◉", title: "Storage Buckets", desc: "Compare bucket configurations including public access, file size limits, and allowed MIME types across environments.", color: "#bfdbfe" },
+];
+
+const HOW_IT_WORKS = [
+  { step: "01", title: "Select sections", desc: "Choose which parts of your schema to compare — or select all 14 sections for a full audit.", icon: "☑" },
+  { step: "02", title: "Copy the SQL", desc: "A custom SQL snapshot query is generated for your selection. Copy it with one click.", icon: "⎘" },
+  { step: "03", title: "Run in both projects", desc: "Open Supabase SQL Editor in Dev and Prod. Run the query in each, export results as JSON.", icon: "▶" },
+  { step: "04", title: "Paste & diff", desc: "Paste both JSON outputs into Driftwatch. Hit Run Diff — results appear instantly in your browser.", icon: "⟳" },
+];
+
+const WHAT_WE_COVER = [
+  { label: "Tables", icon: "⬡" }, { label: "Columns", icon: "≡" },
+  { label: "RLS Policies", icon: "⚿" }, { label: "Triggers", icon: "⚡" },
+  { label: "Functions", icon: "ƒ" }, { label: "Indexes", icon: "⌖" },
+  { label: "Enums", icon: "≣" }, { label: "Foreign Keys", icon: "⇔" },
+  { label: "Check Constraints", icon: "✓" }, { label: "Sequences", icon: "#" },
+  { label: "Extensions", icon: "⊕" }, { label: "Buckets", icon: "◉" },
+  { label: "Bucket RLS", icon: "⚿" }, { label: "Realtime", icon: "⟳" },
+];
+
+const STATS = [
+  { value: "14", label: "Schema sections covered" },
+  { value: "0", label: "Data sent to any server" },
+  { value: "100%", label: "Free, forever" },
+  { value: "~30s", label: "Time to run a full diff" },
+];
+
+function LandingSections({ toolRef }) {
+  const scrollToTool = () => toolRef.current?.scrollIntoView({ behavior: "smooth" });
+
+  return (
+    <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 28px 100px" }}>
+
+      {/* ── Stats bar ── */}
+      <div className="fade-up" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "var(--border)", borderRadius: 14, overflow: "hidden", marginBottom: 80, marginTop: 24 }}>
+        {STATS.map(({ value, label }) => (
+          <div key={label} style={{ background: "var(--bg2)", padding: "28px 20px", textAlign: "center" }}>
+            <div style={{ fontSize: "clamp(26px,4vw,38px)", fontWeight: 800, color: "var(--amber)", letterSpacing: "-0.03em", lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 8, letterSpacing: "0.04em", textTransform: "uppercase" }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── How it works ── */}
+      <div style={{ marginBottom: 80 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ fontSize: 11, color: "var(--amber)", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>Simple workflow</div>
+          <h2 style={{ fontSize: "clamp(22px,3.5vw,32px)", fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em" }}>How it works</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px,1fr))", gap: 12 }}>
+          {HOW_IT_WORKS.map(({ step, title, desc, icon }) => (
+            <div key={step} className="card-hover" style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, padding: "24px 20px", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: 12, right: 16, fontSize: 36, fontWeight: 900, color: "var(--border2)", lineHeight: 1, fontFamily: "'JetBrains Mono', monospace" }}>{step}</div>
+              <div style={{ fontSize: 24, marginBottom: 14 }}>{icon}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>{title}</div>
+              <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.7 }}>{desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Features grid ── */}
+      <div style={{ marginBottom: 80 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ fontSize: 11, color: "var(--amber)", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>What's included</div>
+          <h2 style={{ fontSize: "clamp(22px,3.5vw,32px)", fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em" }}>Built for Supabase developers</h2>
+          <p style={{ fontSize: 14, color: "var(--text2)", marginTop: 10, maxWidth: 480, margin: "10px auto 0" }}>
+            Every section you'd want to compare between environments — nothing more, nothing less.
+          </p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px,1fr))", gap: 12 }}>
+          {FEATURES.map(({ icon, title, desc, color }) => (
+            <div key={title} className="card-hover" style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, padding: "22px 20px" }}>
+              <div style={{ width: 42, height: 42, borderRadius: 10, background: "var(--bg3)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, color, marginBottom: 14 }}>{icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", marginBottom: 7 }}>{title}</div>
+              <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.7 }}>{desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Coverage pill grid ── */}
+      <div style={{ marginBottom: 80 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ fontSize: 11, color: "var(--amber)", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>Full coverage</div>
+          <h2 style={{ fontSize: "clamp(22px,3.5vw,32px)", fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em" }}>14 schema sections</h2>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+          {WHAT_WE_COVER.map(({ label, icon }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 30, padding: "8px 16px" }}>
+              <span style={{ fontSize: 14, color: "var(--amber)" }}>{icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "var(--text2)" }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Why not Supabase CLI ── */}
+      <div style={{ marginBottom: 80 }}>
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div style={{ fontSize: 11, color: "var(--amber)", fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 10 }}>Why Driftwatch</div>
+          <h2 style={{ fontSize: "clamp(22px,3.5vw,32px)", fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em" }}>Vs existing tools</h2>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {[
+            { name: "Supabase CLI db diff", issues: ["Requires Docker + local setup", "High friction for quick checks", "Not accessible to non-engineers"], color: "var(--red)" },
+            { name: "Flyway / Liquibase", issues: ["Enterprise complexity", "Migration-file based, not live DB", "Not Supabase-aware"], color: "var(--red)" },
+            { name: "pgAdmin Schema Diff", issues: ["Desktop app, no browser access", "No Supabase-specific sections", "No RLS or storage support"], color: "var(--red)" },
+            { name: "Driftwatch ✓", issues: ["Zero install, paste and go", "14 Supabase-specific sections", "100% in-browser, free forever"], color: "var(--green)", highlight: true },
+          ].map(({ name, issues, color, highlight }) => (
+            <div key={name} className="card-hover" style={{ background: highlight ? "var(--green-bg)" : "var(--bg2)", border: `1px solid ${highlight ? "var(--green-b)" : "var(--border)"}`, borderRadius: 14, padding: "20px" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: highlight ? "var(--green)" : "var(--text)", marginBottom: 12 }}>{name}</div>
+              {issues.map(issue => (
+                <div key={issue} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+                  <span style={{ color, fontSize: 12, flexShrink: 0, marginTop: 1 }}>{highlight ? "✓" : "✗"}</span>
+                  <span style={{ fontSize: 12, color: highlight ? "var(--green)" : "var(--text2)", lineHeight: 1.5 }}>{issue}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── CTA ── */}
+      <div className="fade-up" style={{ background: "var(--bg2)", border: "1px solid var(--amber-b)", borderRadius: 20, padding: "48px 32px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at center top, var(--amber-bg) 0%, transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "relative" }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>⌁</div>
+          <h2 style={{ fontSize: "clamp(20px,3vw,28px)", fontWeight: 800, color: "var(--text)", letterSpacing: "-0.02em", marginBottom: 10 }}>Ready to check your schema?</h2>
+          <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 28, maxWidth: 400, margin: "0 auto 28px" }}>Takes about 30 seconds. No sign-up, no install, no data leaves your browser.</p>
+          <button onClick={scrollToTool}
+            style={{ background: "var(--amber)", color: "#000", border: "none", borderRadius: 10, padding: "13px 32px", fontSize: 14, fontWeight: 700, letterSpacing: "0.05em", cursor: "pointer", boxShadow: "0 0 30px rgba(245,158,11,0.3)" }}>
+            RUN A DIFF NOW →
+          </button>
+        </div>
+      </div>
+
+      {/* ── Footer ── */}
+      <div style={{ marginTop: 60, paddingTop: 32, borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <img src="/logo.png" alt="Driftwatch" style={{ width: 24, height: 24, objectFit: "contain" }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text2)" }}>Driftwatch</span>
+        </div>
+        <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+          <a href="https://github.com/Versa-Sync-Studios/driftwatch" target="_blank" rel="noopener" style={{ fontSize: 12, color: "var(--text3)" }}>GitHub</a>
+          <a href="https://supabase.com" target="_blank" rel="noopener" style={{ fontSize: 12, color: "var(--text3)" }}>Built for Supabase</a>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text3)" }}>Free forever · No server · No data collected</div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Input page ───────────────────────────────────────────────────────────────
 function InputPage({ onRun }) {
   const [selected, setSelected] = useState([...ALL_SECTIONS]);
@@ -125,6 +282,7 @@ function InputPage({ onRun }) {
   const [devText, setDevText] = useState("");
   const [prodText, setProdText] = useState("");
   const [error, setError] = useState("");
+  const toolRef = useRef(null);
 
   const sql = buildSQL(selected);
   const parseRows = t => { try { const p = JSON.parse(t); return Array.isArray(p) ? p.length : null; } catch { return null; } };
@@ -139,100 +297,106 @@ function InputPage({ onRun }) {
     try { prod = JSON.parse(prodText); } catch { setError("Prod JSON is invalid."); return; }
     if (!Array.isArray(dev) || dev.length === 0) { setError("Dev JSON is empty."); return; }
     if (!Array.isArray(prod) || prod.length === 0) { setError("Prod JSON is empty."); return; }
+    trackEvent("run_diff", { sections: selected.length });
     onRun(dev, prod, devText.length, prodText.length);
   };
 
   return (
-    <div style={{ maxWidth: 920, margin: "0 auto", padding: "52px 28px 80px" }}>
-      {/* Hero */}
-      <div style={{ textAlign: "center", marginBottom: 52 }} className="fade-up">
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: 20, padding: "5px 14px", marginBottom: 20 }}>
-          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--amber)", display: "inline-block", boxShadow: "0 0 8px var(--amber)" }} />
-          <span style={{ fontSize: 11, color: "var(--amber2)", letterSpacing: "0.08em", fontWeight: 600 }}>FREE · IN-BROWSER · NO DATA SENT TO SERVER</span>
-        </div>
-        <h1 style={{ fontWeight: 800, fontSize: "clamp(30px,5vw,50px)", lineHeight: 1.1, color: "var(--text)", letterSpacing: "-0.03em", marginBottom: 16 }}>
-          Catch schema drift<br />
-          <span style={{ color: "var(--amber)" }}>before it hits prod</span>
-        </h1>
-        <p style={{ fontSize: 15, color: "var(--text2)", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
-          Compare tables, columns, RLS policies, triggers, functions, indexes, enums and more between any two Supabase projects.
-        </p>
-      </div>
-
-      {/* Step 1 — Select sections */}
-      <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, padding: 24, marginBottom: 16 }} className="fade-up">
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 6, background: "var(--amber-bg)", border: "1px solid var(--amber-b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--amber)", fontWeight: 700 }}>1</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Choose what to compare</div>
-          <Badge color="var(--amber2)" bg="var(--amber-bg)">{selected.length} selected</Badge>
-        </div>
-        <SectionSelector selected={selected} onChange={setSelected} />
-      </div>
-
-      {/* Step 2 — SQL */}
-      <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, marginBottom: 16, overflow: "hidden" }} className="fade-up">
-        <div onClick={() => setSqlOpen(o => !o)} style={{ padding: "16px 24px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 6, background: "var(--amber-bg)", border: "1px solid var(--amber-b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--amber)", fontWeight: 700 }}>2</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Run this SQL in both Dev and Prod</div>
-            <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>Click to expand · Export results as JSON</div>
+    <>
+      <div ref={toolRef} style={{ maxWidth: 920, margin: "0 auto", padding: "52px 28px 40px" }}>
+        {/* Hero */}
+        <div style={{ textAlign: "center", marginBottom: 52 }} className="fade-up">
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--amber-bg)", border: "1px solid var(--amber-b)", borderRadius: 20, padding: "5px 14px", marginBottom: 20 }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--amber)", display: "inline-block", boxShadow: "0 0 8px var(--amber)" }} />
+            <span style={{ fontSize: 11, color: "var(--amber2)", letterSpacing: "0.08em", fontWeight: 600 }}>FREE · IN-BROWSER · NO DATA SENT TO SERVER</span>
           </div>
-          <CopyBtn text={sql} />
-          <span style={{ color: "var(--text3)", fontSize: 13 }}>{sqlOpen ? "▲" : "▼"}</span>
+          <h1 style={{ fontWeight: 800, fontSize: "clamp(30px,5vw,50px)", lineHeight: 1.1, color: "var(--text)", letterSpacing: "-0.03em", marginBottom: 16 }}>
+            Catch schema drift<br />
+            <span style={{ color: "var(--amber)" }}>before it hits prod</span>
+          </h1>
+          <p style={{ fontSize: 15, color: "var(--text2)", maxWidth: 480, margin: "0 auto", lineHeight: 1.7 }}>
+            Compare tables, columns, RLS policies, triggers, functions, indexes, enums, Realtime and more between any two Supabase projects.
+          </p>
         </div>
-        <div style={{ background: "var(--amber-bg)", borderTop: "1px solid var(--amber-b)", padding: "10px 24px", display: "flex", gap: 8, alignItems: "flex-start" }}>
-          <span style={{ fontSize: 14, color: "var(--amber)", flexShrink: 0 }}>⚠</span>
-          <div style={{ fontSize: 12, color: "var(--amber2)", lineHeight: 1.6 }}>
-            <strong>Before running:</strong> set row limit to <strong>"No limit"</strong> in the SQL editor bottom bar — otherwise results get truncated.
-          </div>
-        </div>
-        {sqlOpen && selected.length > 0 && (
-          <pre style={{ padding: "16px 24px", fontSize: 10, color: "var(--text3)", overflowX: "auto", maxHeight: 260, lineHeight: 1.7, background: "var(--bg)", fontFamily: "'JetBrains Mono', monospace", borderTop: "1px solid var(--border)" }}>
-            {sql}
-          </pre>
-        )}
-        {selected.length === 0 && sqlOpen && (
-          <div style={{ padding: "20px 24px", color: "var(--text3)", fontSize: 13, textAlign: "center" }}>Select at least one section above to generate SQL.</div>
-        )}
-      </div>
 
-      {/* Step 3 — Paste JSON */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }} className="fade-up">
-        {[
-          { step: 3, label: "Dev JSON", color: "var(--blue)", val: devText, set: setDevText, rows: devRows },
-          { step: 4, label: "Prod JSON", color: "var(--purple)", val: prodText, set: setProdText, rows: prodRows },
-        ].map(({ step, label, color, val, set, rows }) => (
-          <div key={step} style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, padding: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-              <div style={{ width: 26, height: 26, borderRadius: 6, background: "var(--amber-bg)", border: "1px solid var(--amber-b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--amber)", fontWeight: 700 }}>{step}</div>
-              <span style={{ fontSize: 13, color, fontWeight: 600 }}>{label}</span>
-              {val && rows !== null && <Badge color="var(--green)" bg="var(--green-bg)">✓ {rows} rows</Badge>}
-              {val && rows === null && <Badge color="var(--red)" bg="var(--red-bg)">✗ Invalid JSON</Badge>}
+        {/* Step 1 */}
+        <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, padding: 24, marginBottom: 16 }} className="fade-up">
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: "var(--amber-bg)", border: "1px solid var(--amber-b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--amber)", fontWeight: 700 }}>1</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Choose what to compare</div>
+            <Badge color="var(--amber2)" bg="var(--amber-bg)">{selected.length} selected</Badge>
+          </div>
+          <SectionSelector selected={selected} onChange={setSelected} />
+        </div>
+
+        {/* Step 2 */}
+        <div style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, marginBottom: 16, overflow: "hidden" }} className="fade-up">
+          <div onClick={() => setSqlOpen(o => !o)} style={{ padding: "16px 24px", cursor: "pointer", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: "var(--amber-bg)", border: "1px solid var(--amber-b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--amber)", fontWeight: 700 }}>2</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Run this SQL in both Dev and Prod</div>
+              <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>Click to expand · Export results as JSON</div>
             </div>
-            <textarea value={val} onChange={e => set(e.target.value)}
-              placeholder='[{"section":"TABLE","schema":"public",...}]'
-              style={{ width: "100%", height: 150, background: "var(--bg)", border: `1px solid ${val && rows === null ? "var(--red-b)" : "var(--border)"}`, borderRadius: 8, padding: 12, color: "var(--text2)", fontSize: 11, lineHeight: 1.5, transition: "border-color 0.2s" }}
-            />
+            <CopyBtn text={sql} />
+            <span style={{ color: "var(--text3)", fontSize: 13 }}>{sqlOpen ? "▲" : "▼"}</span>
           </div>
-        ))}
+          <div style={{ background: "var(--amber-bg)", borderTop: "1px solid var(--amber-b)", padding: "10px 24px", display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <span style={{ fontSize: 14, color: "var(--amber)", flexShrink: 0 }}>⚠</span>
+            <div style={{ fontSize: 12, color: "var(--amber2)", lineHeight: 1.6 }}>
+              <strong>Before running:</strong> set row limit to <strong>"No limit"</strong> in the SQL editor bottom bar — otherwise results get truncated.
+            </div>
+          </div>
+          {sqlOpen && selected.length > 0 && (
+            <pre style={{ padding: "16px 24px", fontSize: 10, color: "var(--text3)", overflowX: "auto", maxHeight: 260, lineHeight: 1.7, background: "var(--bg)", fontFamily: "'JetBrains Mono', monospace", borderTop: "1px solid var(--border)" }}>
+              {sql}
+            </pre>
+          )}
+          {selected.length === 0 && sqlOpen && (
+            <div style={{ padding: "20px 24px", color: "var(--text3)", fontSize: 13, textAlign: "center" }}>Select at least one section above to generate SQL.</div>
+          )}
+        </div>
+
+        {/* Step 3 & 4 */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }} className="fade-up">
+          {[
+            { step: 3, label: "Dev JSON", color: "var(--blue)", val: devText, set: setDevText, rows: devRows },
+            { step: 4, label: "Prod JSON", color: "var(--purple)", val: prodText, set: setProdText, rows: prodRows },
+          ].map(({ step, label, color, val, set, rows }) => (
+            <div key={step} style={{ background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 14, padding: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <div style={{ width: 26, height: 26, borderRadius: 6, background: "var(--amber-bg)", border: "1px solid var(--amber-b)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "var(--amber)", fontWeight: 700 }}>{step}</div>
+                <span style={{ fontSize: 13, color, fontWeight: 600 }}>{label}</span>
+                {val && rows !== null && <Badge color="var(--green)" bg="var(--green-bg)">✓ {rows} rows</Badge>}
+                {val && rows === null && <Badge color="var(--red)" bg="var(--red-bg)">✗ Invalid JSON</Badge>}
+              </div>
+              <textarea value={val} onChange={e => set(e.target.value)}
+                placeholder='[{"section":"TABLE","schema":"public",...}]'
+                style={{ width: "100%", height: 150, background: "var(--bg)", border: `1px solid ${val && rows === null ? "var(--red-b)" : "var(--border)"}`, borderRadius: 8, padding: 12, color: "var(--text2)", fontSize: 11, lineHeight: 1.5, transition: "border-color 0.2s" }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {error && <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: 8, padding: "12px 16px", marginBottom: 12, fontSize: 12, color: "var(--red)" }}>⚠ {error}</div>}
+
+        <button onClick={handleRun} disabled={!canRun}
+          style={{ width: "100%", padding: 16, background: canRun ? "var(--amber)" : "var(--bg3)", border: `1px solid ${canRun ? "var(--amber)" : "var(--border)"}`, borderRadius: 12, color: canRun ? "#000" : "var(--text3)", fontSize: 14, fontWeight: 700, letterSpacing: "0.06em", cursor: canRun ? "pointer" : "not-allowed", transition: "all 0.2s" }}
+          className="fade-up">
+          {canRun ? "RUN DIFF →" : selected.length === 0 ? "SELECT SECTIONS FIRST" : "PASTE JSON TO CONTINUE"}
+        </button>
+
+        <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: "var(--text3)" }}>
+          All processing happens in your browser · No data is sent to any server · Free forever
+        </div>
       </div>
 
-      {error && <div style={{ background: "var(--red-bg)", border: "1px solid var(--red-b)", borderRadius: 8, padding: "12px 16px", marginBottom: 12, fontSize: 12, color: "var(--red)" }}>⚠ {error}</div>}
-
-      <button onClick={handleRun} disabled={!canRun}
-        style={{ width: "100%", padding: 16, background: canRun ? "var(--amber)" : "var(--bg3)", border: `1px solid ${canRun ? "var(--amber)" : "var(--border)"}`, borderRadius: 12, color: canRun ? "#000" : "var(--text3)", fontSize: 14, fontWeight: 700, letterSpacing: "0.06em", cursor: canRun ? "pointer" : "not-allowed", transition: "all 0.2s" }}
-        className="fade-up">
-        {canRun ? "RUN DIFF →" : selected.length === 0 ? "SELECT SECTIONS FIRST" : "PASTE JSON TO CONTINUE"}
-      </button>
-
-      <div style={{ textAlign: "center", marginTop: 32, fontSize: 11, color: "var(--text3)" }}>
-        All processing happens in your browser · No data is sent to any server · Free forever
-      </div>
-    </div>
+      {/* Landing sections below the tool */}
+      <LandingSections toolRef={toolRef} />
+    </>
   );
 }
 
-// ─── Item mini card (for grid display) ───────────────────────────────────────
+// ─── Item mini card ───────────────────────────────────────────────────────────
 function ItemCard({ row, status }) {
   const label = row.sub_name && row.sub_name !== "null" ? row.sub_name : row.name;
   const sublabel = row.sub_name && row.sub_name !== "null" ? row.name : row.schema;
@@ -279,7 +443,7 @@ function FuncDiffView({ dev, prod }) {
 }
 
 // ─── Changed item expanded ────────────────────────────────────────────────────
-function ChangedDetail({ item, section }) {
+function ChangedDetail({ item }) {
   const [open, setOpen] = useState(false);
   const label = item.devRow.sub_name && item.devRow.sub_name !== "null" ? item.devRow.sub_name : item.devRow.name;
   return (
@@ -322,7 +486,6 @@ function SectionResultCard({ section, data }) {
   const synced = total === 0;
   const totalItems = data.onlyDev.length + data.onlyProd.length + data.changed.length + data.synced.length;
 
-  // Auto-switch tab if section has issues
   const tabs = [
     { key: "overview", label: "Overview" },
     ...(data.onlyDev.length > 0 ? [{ key: "onlyDev", label: `Dev only (${data.onlyDev.length})` }] : []),
@@ -333,7 +496,6 @@ function SectionResultCard({ section, data }) {
 
   return (
     <div className="card-hover fade-up" style={{ background: "var(--bg2)", border: `1px solid ${synced ? "var(--border)" : "var(--amber-b)"}`, borderRadius: 14, overflow: "hidden" }}>
-      {/* Header */}
       <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: "var(--bg3)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: meta.color, flexShrink: 0 }}>{meta.icon}</div>
         <div style={{ flex: 1 }}>
@@ -351,7 +513,6 @@ function SectionResultCard({ section, data }) {
         )}
       </div>
 
-      {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", borderTop: "1px solid var(--border)", borderBottom: tabs.length > 1 ? "1px solid var(--border)" : "none" }}>
         {[
           { label: "In Sync", val: data.synced.length, color: "var(--green)" },
@@ -366,7 +527,6 @@ function SectionResultCard({ section, data }) {
         ))}
       </div>
 
-      {/* Tabs */}
       {tabs.length > 1 && (
         <div style={{ borderBottom: "1px solid var(--border)", padding: "0 20px", display: "flex", gap: 0, overflowX: "auto" }}>
           {tabs.map(t => (
@@ -377,7 +537,6 @@ function SectionResultCard({ section, data }) {
         </div>
       )}
 
-      {/* Content */}
       {tabs.length > 1 && (
         <div style={{ padding: 16 }}>
           {tab === "overview" && (
@@ -393,26 +552,10 @@ function SectionResultCard({ section, data }) {
               )}
             </div>
           )}
-          {tab === "onlyDev" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }}>
-              {data.onlyDev.map((r, i) => <ItemCard key={i} row={r} status="onlyDev" />)}
-            </div>
-          )}
-          {tab === "onlyProd" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }}>
-              {data.onlyProd.map((r, i) => <ItemCard key={i} row={r} status="onlyProd" />)}
-            </div>
-          )}
-          {tab === "changed" && (
-            <div>
-              {data.changed.map((c, i) => <ChangedDetail key={i} item={c} section={section} />)}
-            </div>
-          )}
-          {tab === "synced" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }}>
-              {data.synced.map((r, i) => <ItemCard key={i} row={r} status="synced" />)}
-            </div>
-          )}
+          {tab === "onlyDev" && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }}>{data.onlyDev.map((r, i) => <ItemCard key={i} row={r} status="onlyDev" />)}</div>}
+          {tab === "onlyProd" && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }}>{data.onlyProd.map((r, i) => <ItemCard key={i} row={r} status="onlyProd" />)}</div>}
+          {tab === "changed" && <div>{data.changed.map((c, i) => <ChangedDetail key={i} item={c} />)}</div>}
+          {tab === "synced" && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6 }}>{data.synced.map((r, i) => <ItemCard key={i} row={r} status="synced" />)}</div>}
         </div>
       )}
     </div>
@@ -429,7 +572,6 @@ function ResultsPage({ results, devData, prodData, devSize, prodSize, onReset, o
 
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 28px 80px" }}>
-      {/* Verdict */}
       <div className="fade-up" style={{ background: synced ? "var(--green-bg)" : "var(--red-bg)", border: `1px solid ${synced ? "var(--green-b)" : "var(--red-b)"}`, borderRadius: 14, padding: "24px 28px", marginBottom: 24, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
         <div style={{ fontSize: 40 }}>{synced ? "✅" : "❌"}</div>
         <div style={{ flex: 1 }}>
@@ -446,7 +588,6 @@ function ResultsPage({ results, devData, prodData, devSize, prodSize, onReset, o
         </div>
       </div>
 
-      {/* Summary stat cards */}
       <div className="fade-up" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 24 }}>
         {[
           { label: "Sections", val: SECTION_ORDER.length, color: "var(--text2)" },
@@ -461,7 +602,6 @@ function ResultsPage({ results, devData, prodData, devSize, prodSize, onReset, o
         ))}
       </div>
 
-      {/* Section cards */}
       {loading ? <SkeletonResults /> : (
         <div style={{ display: "grid", gap: 12 }}>
           {SECTION_ORDER.map(section => results[section] && (
@@ -506,6 +646,7 @@ export default function App() {
     a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    trackEvent("download_report");
   }, [results, devSize, prodSize]);
 
   return (

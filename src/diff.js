@@ -1,7 +1,7 @@
 export const SECTION_ORDER = [
   "TABLE","COLUMN","RLS_POLICY","TRIGGER","FUNCTION",
   "INDEX","ENUM","FOREIGN_KEY","CHECK_CONSTRAINT","SEQUENCE",
-  "EXTENSION","BUCKET","BUCKET_RLS"
+  "EXTENSION","BUCKET","BUCKET_RLS","REALTIME"
 ];
 
 export const SECTION_META = {
@@ -18,6 +18,7 @@ export const SECTION_META = {
   EXTENSION:        { icon: "⊕", label: "Extensions",        color: "#fecdd3" },
   BUCKET:           { icon: "◉", label: "Buckets",           color: "#bfdbfe" },
   BUCKET_RLS:       { icon: "⚿", label: "Bucket RLS",        color: "#fde68a" },
+  REALTIME:         { icon: "⟳", label: "Realtime",          color: "#34d399" },
 };
 
 function parseDetail(s) {

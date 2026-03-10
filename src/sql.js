@@ -1,8 +1,6 @@
 export const SQL_SECTIONS = {
   TABLE: {
-    label: "Tables",
-    icon: "⬡",
-    description: "Table list + RLS enabled/forced",
+    label: "Tables", icon: "⬡", description: "Table list + RLS enabled/forced",
     sql: `tables AS (
   SELECT 'TABLE' AS section, t.table_schema AS schema, t.table_name AS name, NULL AS sub_name,
     json_build_object('row_security',c.relrowsecurity,'force_rls',c.relforcerowsecurity)::text AS detail
@@ -13,9 +11,7 @@ export const SQL_SECTIONS = {
 )`
   },
   COLUMN: {
-    label: "Columns",
-    icon: "≡",
-    description: "Column types, nullability, defaults",
+    label: "Columns", icon: "≡", description: "Column types, nullability, defaults",
     sql: `columns AS (
   SELECT 'COLUMN' AS section, table_schema AS schema, table_name AS name, column_name AS sub_name,
     json_build_object('ordinal',ordinal_position,'type',udt_name,'nullable',is_nullable,'default',column_default)::text AS detail
@@ -24,9 +20,7 @@ export const SQL_SECTIONS = {
 )`
   },
   RLS_POLICY: {
-    label: "RLS Policies",
-    icon: "⚿",
-    description: "Row level security rules and roles",
+    label: "RLS Policies", icon: "⚿", description: "Row level security rules and roles",
     sql: `rls AS (
   SELECT 'RLS_POLICY' AS section, n.nspname AS schema, c.relname AS name, p.policyname AS sub_name,
     json_build_object('cmd',p.cmd,'roles',p.roles,'qual',p.qual,'with_check',p.with_check)::text AS detail
@@ -37,9 +31,7 @@ export const SQL_SECTIONS = {
 )`
   },
   TRIGGER: {
-    label: "Triggers",
-    icon: "⚡",
-    description: "Trigger events, timing, statements",
+    label: "Triggers", icon: "⚡", description: "Trigger events, timing, statements",
     sql: `triggers AS (
   SELECT 'TRIGGER' AS section, trigger_schema AS schema, event_object_table AS name, trigger_name AS sub_name,
     json_build_object('event',event_manipulation,'timing',action_timing,'orientation',action_orientation,'statement',action_statement)::text AS detail
@@ -48,9 +40,7 @@ export const SQL_SECTIONS = {
 )`
   },
   FUNCTION: {
-    label: "Functions",
-    icon: "ƒ",
-    description: "Full function definitions and signatures",
+    label: "Functions", icon: "ƒ", description: "Full function definitions and signatures",
     sql: `functions AS (
   SELECT 'FUNCTION' AS section, n.nspname AS schema, p.proname AS name,
     pg_get_function_identity_arguments(p.oid) AS sub_name,
@@ -62,9 +52,7 @@ export const SQL_SECTIONS = {
 )`
   },
   INDEX: {
-    label: "Indexes",
-    icon: "⌖",
-    description: "Custom indexes and uniqueness",
+    label: "Indexes", icon: "⌖", description: "Custom indexes and uniqueness",
     sql: `indexes AS (
   SELECT 'INDEX' AS section, n.nspname AS schema, t.relname AS name, i.relname AS sub_name,
     json_build_object('unique',ix.indisunique,'primary',ix.indisprimary,'definition',pg_get_indexdef(ix.indexrelid))::text AS detail
@@ -76,9 +64,7 @@ export const SQL_SECTIONS = {
 )`
   },
   ENUM: {
-    label: "Enums",
-    icon: "≣",
-    description: "Custom enum types and values",
+    label: "Enums", icon: "≣", description: "Custom enum types and values",
     sql: `enums AS (
   SELECT 'ENUM' AS section, n.nspname AS schema, t.typname AS name, e.enumlabel AS sub_name,
     json_build_object('sort_order',e.enumsortorder)::text AS detail
@@ -89,9 +75,7 @@ export const SQL_SECTIONS = {
 )`
   },
   FOREIGN_KEY: {
-    label: "Foreign Keys",
-    icon: "⇔",
-    description: "Table relationships and cascade rules",
+    label: "Foreign Keys", icon: "⇔", description: "Table relationships and cascade rules",
     sql: `foreign_keys AS (
   SELECT 'FOREIGN_KEY' AS section, n.nspname AS schema, c.conname AS name, tc.relname AS sub_name,
     json_build_object('table',tc.relname,'column',kcu.column_name,'ref_table',ccu.table_name,'ref_column',ccu.column_name,'on_delete',rc.delete_rule,'on_update',rc.update_rule)::text AS detail
@@ -105,9 +89,7 @@ export const SQL_SECTIONS = {
 )`
   },
   CHECK_CONSTRAINT: {
-    label: "Check Constraints",
-    icon: "✓",
-    description: "Column validation rules",
+    label: "Check Constraints", icon: "✓", description: "Column validation rules",
     sql: `check_constraints AS (
   SELECT 'CHECK_CONSTRAINT' AS section, n.nspname AS schema, tc.relname AS name, c.conname AS sub_name,
     json_build_object('definition',pg_get_constraintdef(c.oid))::text AS detail
@@ -118,9 +100,7 @@ export const SQL_SECTIONS = {
 )`
   },
   SEQUENCE: {
-    label: "Sequences",
-    icon: "#",
-    description: "Auto-increment sequences",
+    label: "Sequences", icon: "#", description: "Auto-increment sequences",
     sql: `sequences AS (
   SELECT 'SEQUENCE' AS section, sequence_schema AS schema, sequence_name AS name, NULL AS sub_name,
     json_build_object('data_type',data_type,'start',start_value,'increment',increment,'min',minimum_value,'max',maximum_value,'cycle',cycle_option)::text AS detail
@@ -128,9 +108,7 @@ export const SQL_SECTIONS = {
 )`
   },
   EXTENSION: {
-    label: "Extensions",
-    icon: "⊕",
-    description: "Installed Postgres extensions",
+    label: "Extensions", icon: "⊕", description: "Installed Postgres extensions",
     sql: `extensions AS (
   SELECT 'EXTENSION' AS section, 'extensions' AS schema, extname AS name, NULL AS sub_name,
     json_build_object('version',extversion,'schema',n.nspname)::text AS detail
@@ -138,9 +116,7 @@ export const SQL_SECTIONS = {
 )`
   },
   BUCKET: {
-    label: "Buckets",
-    icon: "◉",
-    description: "Storage buckets and settings",
+    label: "Buckets", icon: "◉", description: "Storage buckets and settings",
     sql: `buckets AS (
   SELECT 'BUCKET' AS section, 'storage' AS schema, name AS name, id AS sub_name,
     json_build_object('public',public,'file_size_limit',file_size_limit,'allowed_mimes',allowed_mime_types)::text AS detail
@@ -148,9 +124,7 @@ export const SQL_SECTIONS = {
 )`
   },
   BUCKET_RLS: {
-    label: "Bucket RLS",
-    icon: "⚿",
-    description: "Storage object access policies",
+    label: "Bucket RLS", icon: "⚿", description: "Storage object access policies",
     sql: `bucket_rls AS (
   SELECT 'BUCKET_RLS' AS section, n.nspname AS schema, c.relname AS name, p.policyname AS sub_name,
     json_build_object('cmd',p.cmd,'roles',p.roles,'qual',p.qual,'with_check',p.with_check)::text AS detail
@@ -159,24 +133,38 @@ export const SQL_SECTIONS = {
   JOIN pg_namespace n ON n.oid=c.relnamespace AND n.nspname=p.schemaname
   WHERE p.schemaname='storage' AND p.tablename='objects'
 )`
+  },
+  REALTIME: {
+    label: "Realtime", icon: "⟳", description: "Tables with Realtime publication enabled",
+    sql: `realtime AS (
+  SELECT 'REALTIME' AS section, pt.schemaname AS schema, pt.tablename AS name, NULL AS sub_name,
+    json_build_object('publication',pt.pubname,'schema',pt.schemaname)::text AS detail
+  FROM pg_publication_tables pt
+  WHERE pt.pubname = 'supabase_realtime'
+)`
   }
 };
 
-export const ALL_SECTIONS = Object.keys(SQL_SECTIONS);
+export const ALL_SECTIONS = [
+  "TABLE","COLUMN","RLS_POLICY","TRIGGER","FUNCTION",
+  "INDEX","ENUM","FOREIGN_KEY","CHECK_CONSTRAINT","SEQUENCE",
+  "EXTENSION","BUCKET","BUCKET_RLS","REALTIME"
+];
+
+const CTE_ALIASES = {
+  TABLE:'tables', COLUMN:'columns', RLS_POLICY:'rls', TRIGGER:'triggers',
+  FUNCTION:'functions', INDEX:'indexes', ENUM:'enums', FOREIGN_KEY:'foreign_keys',
+  CHECK_CONSTRAINT:'check_constraints', SEQUENCE:'sequences', EXTENSION:'extensions',
+  BUCKET:'buckets', BUCKET_RLS:'bucket_rls', REALTIME:'realtime'
+};
 
 export function buildSQL(selectedSections) {
   if (!selectedSections || selectedSections.length === 0) return "";
   const ctes = selectedSections.map(s => SQL_SECTIONS[s]?.sql).filter(Boolean);
-  const selects = selectedSections.map(s => {
-    const aliases = { TABLE:'tables', COLUMN:'columns', RLS_POLICY:'rls', TRIGGER:'triggers',
-      FUNCTION:'functions', INDEX:'indexes', ENUM:'enums', FOREIGN_KEY:'foreign_keys',
-      CHECK_CONSTRAINT:'check_constraints', SEQUENCE:'sequences', EXTENSION:'extensions',
-      BUCKET:'buckets', BUCKET_RLS:'bucket_rls' };
-    return `SELECT section, schema, name, sub_name, detail FROM ${aliases[s]}`;
-  });
+  const selects = selectedSections.map(s => `SELECT section, schema, name, sub_name, detail FROM ${CTE_ALIASES[s]}`);
   return `-- ================================================================
 -- DRIFTWATCH SCHEMA SNAPSHOT
--- IMPORTANT: Set row limit to "No limit" in SQL editor bottom bar!
+-- ⚠ Set row limit to "No limit" in SQL editor bottom bar first!
 -- ================================================================
 WITH
 ${ctes.join(',\n')}
